@@ -1,0 +1,77 @@
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local player = Players.LocalPlayer
+
+-- Hàm kiểm tra xem vật thể có phải là Drive #E hay không (bất chấp bị đổi tên)
+local function isTargetItem(obj)
+    local nameLower = obj.Name:lower()
+    
+    -- Cách 1: Kiểm tra tên file (Giống trong ReplicatedFirst)
+    if nameLower:find("drive") and nameLower:find("e") then
+        return true
+    end
+    
+    -- Cách 2: Kiểm tra chữ hiển thị trên nút đè E (Chính xác nhất vì dev không giấu được)
+    local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+    if prompt then
+        local objText = prompt.ObjectText:lower()
+        local actText = prompt.ActionText:lower()
+        if (objText:find("drive") and objText:find("e")) or (actText:find("drive") and actText:find("e")) then
+            return true
+        end
+    end
+    
+    -- Cách 3: Kiểm tra xem có thẻ tên ẩn bên trong không
+    for _, child in pairs(obj:GetChildren()) do
+        if child:IsA("StringValue") or child:IsA("TextLabel") then
+            local text = child:IsA("StringValue") and child.Value:lower() or child.Text:lower()
+            if text:find("drive") and text:find("e") then
+                return true
+            end
+        end
+    end
+    
+    return false
+end
+
+-- Hàm tiến hành bay đến và "húp" đồ cực nhanh
+local function SecureTheLoot(obj)
+    if isTargetItem(obj) then
+        task.wait(0.02) -- Phản xạ siêu tốc 20 mili giây sau khi đồ vừa xuất hiện
+        
+        local character = player.Character
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+        
+        if rootPart then
+            -- Xác định tọa độ (CFrame) để bay tới
+            local targetCFrame = obj:IsA("BasePart") and obj.CFrame or (obj:FindFirstChildWhichIsA("BasePart", true) and obj:FindFirstChildWhichIsA("BasePart", true).CFrame)
+            
+            if targetCFrame then
+                print("🎯 ĐÃ ĐỊNH VỊ ĐƯỢC DRIVE #E! Đang bay đến giật đồ...")
+                rootPart.CFrame = targetCFrame
+                
+                -- Tìm và kích hoạt nút nhặt liên tục (Spam 5 lần cho chắc ăn)
+                local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true) or obj:WaitForChild("ProximityPrompt", 0.5)
+                if prompt then
+                    for i = 1, 5 do
+                        fireproximityprompt(prompt, 1)
+                        task.wait(0.02)
+                    end
+                    print("💰 Đã hốt Drive #E thành công trước mũi thiên hạ!")
+                end
+            end
+        end
+    end
+end
+
+-- Bật chế độ rình rập ngoài Workspace
+Workspace.DescendantAdded:Connect(function(descendant)
+    task.spawn(SecureTheLoot, descendant)
+end)
+
+-- Quét lại một lượt các item đang có sẵn trên sàn
+for _, descendant in pairs(Workspace:GetDescendants()) do
+    task.spawn(SecureTheLoot, descendant)
+end
+
+print("👁️ [SIÊU RADAR ACTIVE]: Đã bật chế độ quét chữ hiển thị. Dev đổi tên file kiểu gì cũng không thoát được!")
